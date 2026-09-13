@@ -15,9 +15,12 @@ router.post('/evaluate', (req, res) => {
   if (!boone) {
     return res.status(400).json({ error: 'Upload Boone rankings first (Starters tab) before evaluating trades.' });
   }
-  const rankById = new Map(boone.rows.map((r) => [r.sleeperId, r.rank]));
+  const byId = new Map(boone.rows.map((r) => [r.sleeperId, r]));
   const withRank = (side) =>
-    side.map((p) => ({ ...p, rank: rankById.get(p.sleeperId) ?? null }));
+    side.map((p) => {
+      const ranked = byId.get(p.sleeperId);
+      return { ...p, rank: ranked ? ranked.rank : null, position: ranked ? ranked.pos : p.position };
+    });
 
   const result = evaluateTrade(withRank(sideA), withRank(sideB));
   res.json(result);

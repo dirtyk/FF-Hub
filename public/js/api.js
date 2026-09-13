@@ -16,9 +16,10 @@ const Api = {
     if (!res.ok) throw new Error(data.error || `Request failed: ${res.status}`);
     return data;
   },
-  async postFile(url, file) {
+  async postFile(url, file, extraFields) {
     const form = new FormData();
     form.append('file', file);
+    Object.entries(extraFields || {}).forEach(([k, v]) => form.append(k, v));
     const res = await fetch(url, { method: 'POST', body: form });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `Request failed: ${res.status}`);

@@ -80,23 +80,45 @@
         <div class="rankings-grid">
           <div class="ranking-upload">
             <h3>Justin Boone (Yahoo, 0.5 PPR)</h3>
-            <p class="hint">Paste his rankings table or upload a CSV/TXT export (Rank, Player, Team, Position).</p>
-            <textarea id="boone-paste" rows="4" placeholder="Paste rankings here..."></textarea>
+            <p class="hint">Boone publishes a separate list per position - pick the position below, then paste or upload just that list (Rank + Player, or a full Rank/Player/Team/Position table). Repeat per position; each upload only replaces that position's list.</p>
+            <div class="row">
+              <select id="boone-pos">
+                <option value="QB">QB</option>
+                <option value="RB">RB</option>
+                <option value="WR">WR</option>
+                <option value="TE">TE</option>
+                <option value="K">K</option>
+                <option value="DEF">DEF</option>
+              </select>
+            </div>
+            <textarea id="boone-paste" rows="4" placeholder="Paste this position's rankings here..."></textarea>
             <div class="row">
               <input type="file" id="boone-file" accept=".csv,.txt" />
               <button id="boone-upload-btn">Upload / Refresh</button>
             </div>
             <p id="boone-status" class="status"></p>
+            <p id="boone-loaded" class="hint"></p>
           </div>
           <div class="ranking-upload">
             <h3>JJ Zachariason</h3>
-            <p class="hint">Paste his rankings table or upload a CSV/TXT export (Rank, Player, Team, Position).</p>
-            <textarea id="jjz-paste" rows="4" placeholder="Paste rankings here..."></textarea>
+            <p class="hint">Same idea: pick a position, paste or upload just that position's list. Repeat per position.</p>
+            <div class="row">
+              <select id="jjz-pos">
+                <option value="QB">QB</option>
+                <option value="RB">RB</option>
+                <option value="WR">WR</option>
+                <option value="TE">TE</option>
+                <option value="K">K</option>
+                <option value="DEF">DEF</option>
+              </select>
+            </div>
+            <textarea id="jjz-paste" rows="4" placeholder="Paste this position's rankings here..."></textarea>
             <div class="row">
               <input type="file" id="jjz-file" accept=".csv,.txt" />
               <button id="jjz-upload-btn">Upload / Refresh</button>
             </div>
             <p id="jjz-status" class="status"></p>
+            <p id="jjz-loaded" class="hint"></p>
           </div>
         </div>
       </div>

@@ -1,31 +1,35 @@
 // Rankings upload (Boone + JJZ) and the starters-vs-bench comparison/swap table.
 (function () {
   function setupUpload(source) {
+    const posEl = document.getElementById(`${source}-pos`);
     const pasteEl = document.getElementById(`${source}-paste`);
     const fileEl = document.getElementById(`${source}-file`);
     const btnEl = document.getElementById(`${source}-upload-btn`);
     const statusEl = document.getElementById(`${source}-status`);
+    const loadedEl = document.getElementById(`${source}-loaded`);
 
     btnEl.addEventListener('click', async () => {
       statusEl.textContent = 'Uploading...';
       statusEl.className = 'status';
+      const pos = posEl.value;
       try {
         let result;
         if (fileEl.files && fileEl.files[0]) {
-          result = await Api.postFile(`/api/rankings/${source}`, fileEl.files[0]);
+          result = await Api.postFile(`/api/rankings/${source}`, fileEl.files[0], { pos });
         } else if (pasteEl.value.trim()) {
-          result = await Api.post(`/api/rankings/${source}`, { text: pasteEl.value });
+          result = await Api.post(`/api/rankings/${source}`, { text: pasteEl.value, pos });
         } else {
           statusEl.textContent = 'Paste rankings or choose a file first.';
           statusEl.className = 'status error';
           return;
         }
-        statusEl.textContent = `Loaded ${result.matchedCount} players` +
+        statusEl.textContent = `${pos}: loaded ${result.matchedCount} players` +
           (result.unmatchedCount ? `, ${result.unmatchedCount} unmatched (see console).` : '.');
         statusEl.className = 'status ok';
         if (result.unmatched && result.unmatched.length) {
-          console.warn(`Unmatched ${source} rows:`, result.unmatched);
+          console.warn(`Unmatched ${source} ${pos} rows:`, result.unmatched);
         }
+        renderLoadedPositions(source, loadedEl, result.positions);
         if (window.FFHub && window.FFHub.refreshTradeRankingsStatus) {
           window.FFHub.refreshTradeRankingsStatus();
         }
@@ -37,8 +41,21 @@
     });
   }
 
-  function rankCell(rank) {
-    return rank ? `#${rank}` : '<span class="hint">unranked</span>';
+  function renderLoadedPositions(source, el, positions) {
+    if (!positions) return;
+    const summary = Object.entries(positions)
+      .filter(([, slice]) => slice.rows.length > 0)
+      .map(([pos, slice]) => `${pos} (${slice.rows.length})`)
+      .join(', ');
+    el.textContent = summary ? `Loaded: ${summary}` : '';
+  }
+
+  // Ranks are per-position (Boone/JJZ each publish separate position lists),
+  // so "#5" only makes sense alongside its position - pass withPos:true where
+  // there isn't already an adjacent Position column making that clear.
+  function rankCell(pos, rank, withPos) {
+    if (!rank) return '<span class="hint">unranked</span>';
+    return withPos ? `${pos || ''} #${rank}` : `#${rank}`;
   }
 
   async function loadComparison() {
@@ -62,8 +79,8 @@
           .map(
             (s) => `<div class="row" style="margin-bottom:6px;">
               <span class="pill warn">${s.slot}</span>
-              Bench <strong>${s.suggested.name}</strong> (Boone ${rankCell(s.suggested.boone_rank)}, JJZ ${rankCell(s.suggested.jjz_rank)})
-              outranks starter <strong>${s.starter.name}</strong> (Boone ${rankCell(s.starter.boone_rank)}, JJZ ${rankCell(s.starter.jjz_rank)})
+              Bench <strong>${s.suggested.name}</strong> (Boone ${rankCell(s.suggested.position, s.suggested.boone_rank, true)}, JJZ ${rankCell(s.suggested.position, s.suggested.jjz_rank, true)})
+              outranks starter <strong>${s.starter.name}</strong> (Boone ${rankCell(s.starter.position, s.starter.boone_rank, true)}, JJZ ${rankCell(s.starter.position, s.starter.jjz_rank, true)})
               <span class="pill">${s.supportedBy.join(' + ')}</span>
             </div>`
           )
@@ -84,8 +101,8 @@
                   <td><span class="pill ${p.group === 'Starter' ? 'starter' : ''}">${p.slot || p.group}</span></td>
                   <td>${p.full_name}</td>
                   <td>${p.position || ''}</td>
-                  <td>${rankCell(p.boone_rank)}</td>
-                  <td>${rankCell(p.jjz_rank)}</td>
+                  <td>${rankCell(p.position, p.boone_rank)}</td>
+                  <td>${rankCell(p.position, p.jjz_rank)}</td>
                 </tr>`
               )
               .join('')}

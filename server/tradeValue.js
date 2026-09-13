@@ -1,12 +1,35 @@
-// Converts an overall rank into a trade "value" via a diminishing-returns
-// curve (rank 1 ~1000, rank 10 ~251, rank 50 ~87, rank 150 ~40, ...).
-// The exponent is the one knob to tune if values ever feel off.
+// Converts a player's (position, positional rank) into a trade "value" via a
+// diminishing-returns rank curve plus a positional weight - needed because
+// Boone's rankings are published per-position (his "RB #5" and "TE #5" are
+// not worth the same), so ranks alone aren't comparable across positions.
 const CURVE_EXPONENT = 0.6;
 const CURVE_SCALE = 1000;
+
+// Rough single-QB, 0.5 PPR redraft weighting: RB/WR carry the most trade
+// value, top-of-market TE is close behind, QB is worth notably less than
+// RB/WR in a single-QB league (bump toward 1.0 for superflex/2QB leagues),
+// and K/DEF are essentially worthless in trades. Tune freely.
+const POSITION_WEIGHTS = {
+  RB: 1.0,
+  WR: 1.0,
+  TE: 0.85,
+  QB: 0.55,
+  K: 0.05,
+  DEF: 0.05,
+};
+
+function weightForPosition(pos) {
+  return POSITION_WEIGHTS[pos] ?? 0.7; // unknown position: middling default
+}
 
 function valueForRank(rank) {
   if (!rank || rank <= 0) return 0;
   return Math.round(CURVE_SCALE / Math.pow(rank, CURVE_EXPONENT));
+}
+
+function valueForPlayer(position, rank) {
+  if (!rank || rank <= 0) return 0;
+  return Math.round(valueForRank(rank) * weightForPosition(position));
 }
 
 // sideA / sideB: arrays of { sleeperId, full_name, position, rank } (rank may
@@ -15,7 +38,7 @@ function evaluateTrade(sideA, sideB) {
   const scoreSide = (side) =>
     side.map((p) => ({
       ...p,
-      value: p.rank ? valueForRank(p.rank) : 0,
+      value: valueForPlayer(p.position, p.rank),
     }));
 
   const scoredA = scoreSide(sideA);
@@ -46,4 +69,4 @@ function evaluateTrade(sideA, sideB) {
   };
 }
 
-module.exports = { valueForRank, evaluateTrade };
+module.exports = { valueForRank, valueForPlayer, evaluateTrade };

@@ -1,6 +1,7 @@
 // Compares a team's actual starting lineup against its bench using one or
 // more ranking sources, and suggests swaps where a bench player outranks the
 // starter occupying a slot he's eligible for.
+const { valueForPlayer } = require('./tradeValue');
 
 const SLOT_ELIGIBILITY = {
   QB: ['QB'],
@@ -43,6 +44,16 @@ function buildComparison(team, rankings) {
   const starters = team.starters.map(withRanks);
   const bench = team.bench.map(withRanks);
 
+  // Comparisons use position-weighted *value*, not raw rank: a same-position
+  // slot (QB vs QB, RB vs RB) ranks identically either way, but FLEX/SUPERFLEX
+  // slots pit different positions against each other (e.g. bench RB vs
+  // starting TE) where raw positional ranks (rank 5 within each position)
+  // aren't directly comparable.
+  const valueOf = (p, source) => {
+    const rank = p[source];
+    return rank ? valueForPlayer(p.position, rank) : null;
+  };
+
   const suggestions = [];
   for (const starter of starters) {
     const eligible = eligiblePositions(starter.slot);
@@ -52,13 +63,17 @@ function buildComparison(team, rankings) {
     // player who outranks the starter on both sources shows as one row.
     const bestBySource = {};
     for (const source of ['boone_rank', 'jjz_rank']) {
-      const starterRank = starter[source];
+      const starterValue = valueOf(starter, source);
       let best = null;
+      let bestValue = 0;
       for (const c of candidates) {
-        const cRank = c[source];
-        if (cRank == null) continue;
-        if (starterRank == null || cRank < starterRank) {
-          if (!best || cRank < best[source]) best = c;
+        const cValue = valueOf(c, source);
+        if (cValue == null) continue;
+        if (starterValue == null || cValue > starterValue) {
+          if (cValue > bestValue) {
+            best = c;
+            bestValue = cValue;
+          }
         }
       }
       if (best) bestBySource[source] = best;
@@ -69,8 +84,8 @@ function buildComparison(team, rankings) {
       if (!byPlayer.has(key)) {
         byPlayer.set(key, {
           slot: starter.slot,
-          starter: { name: starter.full_name, boone_rank: starter.boone_rank, jjz_rank: starter.jjz_rank },
-          suggested: { name: bench_player.full_name, boone_rank: bench_player.boone_rank, jjz_rank: bench_player.jjz_rank },
+          starter: { name: starter.full_name, position: starter.position, boone_rank: starter.boone_rank, jjz_rank: starter.jjz_rank },
+          suggested: { name: bench_player.full_name, position: bench_player.position, boone_rank: bench_player.boone_rank, jjz_rank: bench_player.jjz_rank },
           supportedBy: [],
         });
       }

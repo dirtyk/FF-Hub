@@ -60,8 +60,12 @@ function findCol(headers, candidates) {
   return -1;
 }
 
-// Parses raw pasted/uploaded text into rows: [{rank, name, pos, team}]
-function parseRankingsText(text) {
+// Parses raw pasted/uploaded text into rows: [{rank, name, pos, team}].
+// fallbackPos is applied to any row whose own Position column is blank -
+// used when the user is pasting a single position's list (e.g. Boone's
+// separate QB/RB/WR/TE/K/DEF pages, which don't include a Position column
+// at all) and picks the position from a dropdown instead.
+function parseRankingsText(text, fallbackPos) {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -104,11 +108,12 @@ function parseRankingsText(text) {
     const name = cells[nameCol];
     if (!name) return;
     const rank = rankCol !== -1 && cells[rankCol] ? parseInt(cells[rankCol], 10) : i + 1;
+    const parsedPos = posCol !== -1 ? normalizePos(cells[posCol]) : '';
     rows.push({
       rank: Number.isFinite(rank) ? rank : i + 1,
       name: name.trim(),
       team: teamCol !== -1 ? (cells[teamCol] || '').trim() : '',
-      pos: posCol !== -1 ? normalizePos(cells[posCol]) : '',
+      pos: parsedPos || normalizePos(fallbackPos) || '',
     });
   });
 
@@ -174,27 +179,80 @@ function rankingsPath(source) {
   return path.join(DATA_DIR, `rankings-${source}.json`);
 }
 
-function saveRankings(source, matched, unmatched) {
+function readRawFile(source) {
+  const p = rankingsPath(source);
+  if (!fs.existsSync(p)) return { positions: {} };
+  try {
+    const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
+    // Migrate the old flat {uploadedAt, rows, unmatched} shape from before
+    // rankings were split per-position, if anyone still has one on disk.
+    if (parsed.positions) return parsed;
+    if (parsed.rows) {
+      const positions = {};
+      for (const row of parsed.rows) {
+        const pos = row.pos || 'UNKNOWN';
+        (positions[pos] = positions[pos] || { uploadedAt: parsed.uploadedAt, rows: [], unmatched: [] }).rows.push(row);
+      }
+      return { positions };
+    }
+    return { positions: {} };
+  } catch {
+    return { positions: {} };
+  }
+}
+
+// Rankings are uploaded one position at a time (Boone publishes separate
+// QB/RB/WR/TE/K/DEF pages) - this replaces only that position's slice,
+// leaving previously-uploaded positions untouched. If the pasted rows
+// happen to carry their own mixed positions (e.g. a combined export), each
+// row is filed under its own position rather than the slice `pos` passed in.
+function saveRankingsForPosition(source, pos, matched, unmatched) {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  const payload = { uploadedAt: Date.now(), rows: matched, unmatched };
-  fs.writeFileSync(rankingsPath(source), JSON.stringify(payload, null, 2), 'utf8');
-  return payload;
+  const file = readRawFile(source);
+  const uploadedAt = Date.now();
+
+  const touched = new Set();
+  const byPos = {};
+  for (const row of matched) {
+    const rowPos = row.pos || pos || 'UNKNOWN';
+    (byPos[rowPos] = byPos[rowPos] || []).push(row);
+    touched.add(rowPos);
+  }
+  // A position slice with zero matched rows this upload (e.g. everything in
+  // it failed to match) still counts as "touched" so it gets replaced/cleared
+  // rather than silently keeping stale data under the position the user picked.
+  touched.add(pos || 'UNKNOWN');
+
+  for (const p of touched) {
+    file.positions[p] = { uploadedAt, rows: byPos[p] || [], unmatched: p === (pos || 'UNKNOWN') ? unmatched : [] };
+  }
+
+  fs.writeFileSync(rankingsPath(source), JSON.stringify(file, null, 2), 'utf8');
+  return flattenRankings(file);
+}
+
+function flattenRankings(file) {
+  const rows = [];
+  const unmatched = [];
+  let uploadedAt = 0;
+  for (const slice of Object.values(file.positions)) {
+    rows.push(...slice.rows);
+    unmatched.push(...(slice.unmatched || []));
+    uploadedAt = Math.max(uploadedAt, slice.uploadedAt || 0);
+  }
+  return { uploadedAt, rows, unmatched, positions: file.positions };
 }
 
 function loadRankings(source) {
-  const p = rankingsPath(source);
-  if (!fs.existsSync(p)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(p, 'utf8'));
-  } catch {
-    return null;
-  }
+  const file = readRawFile(source);
+  if (Object.keys(file.positions).length === 0) return null;
+  return flattenRankings(file);
 }
 
 module.exports = {
   parseRankingsText,
   matchRows,
-  saveRankings,
+  saveRankingsForPosition,
   loadRankings,
   normalizeName,
   normalizePos,

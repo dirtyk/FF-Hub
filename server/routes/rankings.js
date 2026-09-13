@@ -1,12 +1,13 @@
 const express = require('express');
 const multer = require('multer');
 const sleeper = require('../sleeper');
-const { parseRankingsText, matchRows, saveRankings, loadRankings } = require('../rankings');
+const { parseRankingsText, matchRows, saveRankingsForPosition, loadRankings } = require('../rankings');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
 
 const VALID_SOURCES = new Set(['boone', 'jjz']);
+const VALID_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
 
 function checkSource(req, res, next) {
   if (!VALID_SOURCES.has(req.params.source)) {
@@ -21,20 +22,28 @@ router.get('/:source', checkSource, (req, res) => {
   res.json(data);
 });
 
-// Accepts either a raw text body { text: "..." } (paste) or a multipart file upload.
+// Accepts either a raw text body { text: "...", pos: "QB" } (paste) or a
+// multipart file upload with a "pos" field. `pos` is the position this
+// paste/file is for (Boone publishes one list per position) - rows that
+// already carry their own Position column override it. Uploading a position
+// again replaces only that position's slice.
 router.post('/:source', checkSource, upload.single('file'), async (req, res) => {
   try {
     const text = req.file ? req.file.buffer.toString('utf8') : req.body.text;
     if (!text || !text.trim()) {
       return res.status(400).json({ error: 'No file or pasted text provided.' });
     }
-    const { rows, warnings } = parseRankingsText(text);
+    const pos = (req.body.pos || '').toUpperCase().trim();
+    if (pos && !VALID_POSITIONS.has(pos)) {
+      return res.status(400).json({ error: `pos must be one of ${[...VALID_POSITIONS].join(', ')}` });
+    }
+    const { rows, warnings } = parseRankingsText(text, pos);
     if (rows.length === 0) {
       return res.status(400).json({ error: 'Could not parse any rows.', warnings });
     }
     const players = await sleeper.getAllPlayers();
     const { matched, unmatched } = matchRows(rows, players);
-    const saved = saveRankings(req.params.source, matched, unmatched);
+    const saved = saveRankingsForPosition(req.params.source, pos, matched, unmatched);
     res.json({
       ...saved,
       warnings,
