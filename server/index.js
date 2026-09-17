@@ -3,6 +3,7 @@ const path = require('path');
 
 const sleeperRoutes = require('./routes/sleeper');
 const rankingsRoutes = require('./routes/rankings');
+const tradeValuesRoutes = require('./routes/tradeValues');
 const tradeRoutes = require('./routes/trade');
 const startersRoutes = require('./routes/starters');
 
@@ -14,6 +15,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use('/api/sleeper', sleeperRoutes);
 app.use('/api/rankings', rankingsRoutes);
+app.use('/api/tradevalues', tradeValuesRoutes);
 app.use('/api/trade', tradeRoutes);
 app.use('/api/starters', startersRoutes);
 

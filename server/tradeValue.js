@@ -32,17 +32,11 @@ function valueForPlayer(position, rank) {
   return Math.round(valueForRank(rank) * weightForPosition(position));
 }
 
-// sideA / sideB: arrays of { sleeperId, full_name, position, rank } (rank may
-// be null/undefined for unranked/unmatched players).
-function evaluateTrade(sideA, sideB) {
-  const scoreSide = (side) =>
-    side.map((p) => ({
-      ...p,
-      value: valueForPlayer(p.position, p.rank),
-    }));
-
-  const scoredA = scoreSide(sideA);
-  const scoredB = scoreSide(sideB);
+// Totals two already-scored sides (each player already has a `value`) and
+// produces a verdict. Used by the Trade Calculator with Boone's own HALF
+// (0.5 PPR) trade-chart values, which are already comparable across
+// positions - no curve/weighting needed on top of them.
+function combineSides(scoredA, scoredB) {
   const totalA = scoredA.reduce((s, p) => s + p.value, 0);
   const totalB = scoredB.reduce((s, p) => s + p.value, 0);
   const diff = totalA - totalB;
@@ -69,4 +63,4 @@ function evaluateTrade(sideA, sideB) {
   };
 }
 
-module.exports = { valueForRank, valueForPlayer, evaluateTrade };
+module.exports = { valueForRank, valueForPlayer, combineSides };

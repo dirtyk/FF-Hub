@@ -1,10 +1,7 @@
 // Parses an uploaded/pasted rankings file (CSV-ish: Rank, Player, Team, Position
 // in some header order) and matches each row to a Sleeper player_id, so the
-// Trade Calculator and Starters tool can join rankings onto real rosters.
-const fs = require('fs');
-const path = require('path');
-
-const DATA_DIR = path.join(__dirname, '..', 'data');
+// Starters tool can join rankings onto real rosters.
+const { makeStore } = require('./positionedStore');
 
 const SUFFIXES = /\b(jr|sr|ii|iii|iv|v)\.?$/i;
 const DST_WORDS = /\b(defense|dst|d\/st)\b/i;
@@ -175,78 +172,18 @@ function matchRows(rows, players) {
   return { matched, unmatched };
 }
 
-function rankingsPath(source) {
-  return path.join(DATA_DIR, `rankings-${source}.json`);
+const stores = {};
+function storeFor(source) {
+  if (!stores[source]) stores[source] = makeStore(`rankings-${source}.json`);
+  return stores[source];
 }
 
-function readRawFile(source) {
-  const p = rankingsPath(source);
-  if (!fs.existsSync(p)) return { positions: {} };
-  try {
-    const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
-    // Migrate the old flat {uploadedAt, rows, unmatched} shape from before
-    // rankings were split per-position, if anyone still has one on disk.
-    if (parsed.positions) return parsed;
-    if (parsed.rows) {
-      const positions = {};
-      for (const row of parsed.rows) {
-        const pos = row.pos || 'UNKNOWN';
-        (positions[pos] = positions[pos] || { uploadedAt: parsed.uploadedAt, rows: [], unmatched: [] }).rows.push(row);
-      }
-      return { positions };
-    }
-    return { positions: {} };
-  } catch {
-    return { positions: {} };
-  }
-}
-
-// Rankings are uploaded one position at a time (Boone publishes separate
-// QB/RB/WR/TE/K/DEF pages) - this replaces only that position's slice,
-// leaving previously-uploaded positions untouched. If the pasted rows
-// happen to carry their own mixed positions (e.g. a combined export), each
-// row is filed under its own position rather than the slice `pos` passed in.
 function saveRankingsForPosition(source, pos, matched, unmatched) {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  const file = readRawFile(source);
-  const uploadedAt = Date.now();
-
-  const touched = new Set();
-  const byPos = {};
-  for (const row of matched) {
-    const rowPos = row.pos || pos || 'UNKNOWN';
-    (byPos[rowPos] = byPos[rowPos] || []).push(row);
-    touched.add(rowPos);
-  }
-  // A position slice with zero matched rows this upload (e.g. everything in
-  // it failed to match) still counts as "touched" so it gets replaced/cleared
-  // rather than silently keeping stale data under the position the user picked.
-  touched.add(pos || 'UNKNOWN');
-
-  for (const p of touched) {
-    file.positions[p] = { uploadedAt, rows: byPos[p] || [], unmatched: p === (pos || 'UNKNOWN') ? unmatched : [] };
-  }
-
-  fs.writeFileSync(rankingsPath(source), JSON.stringify(file, null, 2), 'utf8');
-  return flattenRankings(file);
-}
-
-function flattenRankings(file) {
-  const rows = [];
-  const unmatched = [];
-  let uploadedAt = 0;
-  for (const slice of Object.values(file.positions)) {
-    rows.push(...slice.rows);
-    unmatched.push(...(slice.unmatched || []));
-    uploadedAt = Math.max(uploadedAt, slice.uploadedAt || 0);
-  }
-  return { uploadedAt, rows, unmatched, positions: file.positions };
+  return storeFor(source).saveForPosition(pos, matched, unmatched);
 }
 
 function loadRankings(source) {
-  const file = readRawFile(source);
-  if (Object.keys(file.positions).length === 0) return null;
-  return flattenRankings(file);
+  return storeFor(source).load();
 }
 
 module.exports = {
@@ -256,4 +193,7 @@ module.exports = {
   loadRankings,
   normalizeName,
   normalizePos,
+  splitCsvLine,
+  detectDelimiter,
+  findCol,
 };

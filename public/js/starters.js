@@ -30,9 +30,6 @@
           console.warn(`Unmatched ${source} ${pos} rows:`, result.unmatched);
         }
         renderLoadedPositions(source, loadedEl, result.positions);
-        if (window.FFHub && window.FFHub.refreshTradeRankingsStatus) {
-          window.FFHub.refreshTradeRankingsStatus();
-        }
         loadComparison();
       } catch (e) {
         statusEl.textContent = e.message;

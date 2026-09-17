@@ -116,27 +116,63 @@
       const li = listEl.querySelector(`li[data-id="${p.sleeperId}"]`);
       if (!li) return;
       const meta = li.querySelector('.meta');
-      const rankTxt = p.rank ? `#${p.rank} &middot; value ${p.value}` : 'unranked';
-      meta.innerHTML += ` &middot; ${rankTxt}`;
+      const valueTxt = p.value ? `value ${p.value}` : 'no trade value loaded';
+      meta.innerHTML += ` &middot; ${valueTxt}`;
     });
   }
 
-  function refreshRankingsStatus() {
-    const el = document.getElementById('trade-rankings-status');
-    Api.get('/api/rankings/boone')
-      .then((data) => {
-        el.textContent = `Boone rankings loaded (${data.rows.length} players, uploaded ${new Date(data.uploadedAt).toLocaleString()}).`;
-        el.className = 'status ok';
-      })
-      .catch(() => {
-        el.textContent = 'No Boone rankings uploaded yet - go to the Starters tab to upload them.';
-        el.className = 'status error';
-      });
+  function renderLoadedPositions(el, positions) {
+    if (!positions) return;
+    const summary = Object.entries(positions)
+      .filter(([, slice]) => slice.rows.length > 0)
+      .map(([pos, slice]) => `${pos} (${slice.rows.length})`)
+      .join(', ');
+    el.textContent = summary ? `Loaded: ${summary}` : '';
+  }
+
+  function setupTradeValueUpload() {
+    const posEl = document.getElementById('boonetv-pos');
+    const pasteEl = document.getElementById('boonetv-paste');
+    const fileEl = document.getElementById('boonetv-file');
+    const btnEl = document.getElementById('boonetv-upload-btn');
+    const statusEl = document.getElementById('boonetv-status');
+    const loadedEl = document.getElementById('boonetv-loaded');
+
+    btnEl.addEventListener('click', async () => {
+      statusEl.textContent = 'Uploading...';
+      statusEl.className = 'status';
+      const pos = posEl.value;
+      try {
+        let result;
+        if (fileEl.files && fileEl.files[0]) {
+          result = await Api.postFile('/api/tradevalues/boone', fileEl.files[0], { pos });
+        } else if (pasteEl.value.trim()) {
+          result = await Api.post('/api/tradevalues/boone', { text: pasteEl.value, pos });
+        } else {
+          statusEl.textContent = 'Paste the chart or choose a file first.';
+          statusEl.className = 'status error';
+          return;
+        }
+        statusEl.textContent = `${pos}: loaded ${result.matchedCount} players` +
+          (result.unmatchedCount ? `, ${result.unmatchedCount} unmatched (see console).` : '.');
+        statusEl.className = 'status ok';
+        if (result.unmatched && result.unmatched.length) {
+          console.warn(`Unmatched Boone trade-value ${pos} rows:`, result.unmatched);
+        }
+        renderLoadedPositions(loadedEl, result.positions);
+        evaluate();
+      } catch (e) {
+        statusEl.textContent = e.message;
+        statusEl.className = 'status error';
+      }
+    });
+
+    Api.get('/api/tradevalues/boone')
+      .then((data) => renderLoadedPositions(loadedEl, data.positions))
+      .catch(() => {});
   }
 
   setupSide('giving');
   setupSide('receiving');
-  window.FFHub = window.FFHub || {};
-  window.FFHub.refreshTradeRankingsStatus = refreshRankingsStatus;
-  refreshRankingsStatus();
+  setupTradeValueUpload();
 })();
