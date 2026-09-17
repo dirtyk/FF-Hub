@@ -42,4 +42,25 @@ const Store = {
   set rosterId(val) {
     localStorage.setItem('ffhub.rosterId', val);
   },
+  get username() {
+    return localStorage.getItem('ffhub.username') || '';
+  },
+  set username(val) {
+    localStorage.setItem('ffhub.username', val);
+  },
+  get sleeperUserId() {
+    return localStorage.getItem('ffhub.sleeperUserId') || null;
+  },
+  set sleeperUserId(val) {
+    localStorage.setItem('ffhub.sleeperUserId', val);
+  },
+  // The full list of leagues Sleeper returned for that username, so
+  // switching leagues later doesn't require looking them up again.
+  get leagues() {
+    const raw = localStorage.getItem('ffhub.leagues');
+    return raw ? JSON.parse(raw) : null;
+  },
+  set leagues(val) {
+    localStorage.setItem('ffhub.leagues', JSON.stringify(val));
+  },
 };
