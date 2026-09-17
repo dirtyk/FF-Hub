@@ -54,12 +54,6 @@
           pages used on the Starters tab. Pick a position, then paste or upload just that
           position's chart. Repeat per position.
         </p>
-        <p class="hint">
-          If pasting directly from the page comes out scrambled, try pasting it as one value
-          per line, in reading order, starting with the header row - e.g. <code>Player</code>,
-          <code>HALF</code>, <code>PPR</code>, then each row's values in order. That format is
-          supported too.
-        </p>
         <div class="row">
           <select id="boonetv-pos">
             <option value="QB">QB</option>
@@ -70,7 +64,21 @@
             <option value="DEF">DEF</option>
           </select>
         </div>
+
+        <p class="hint" style="margin-top:10px;"><strong>Option A - paste the page URL</strong> (easiest; works for his Trade Value Chart pages):</p>
+        <div class="row">
+          <input type="text" id="boonetv-url" class="player-search" placeholder="https://sports.yahoo.com/fantasy/article/2026-trade-value-charts-...html" />
+          <button id="boonetv-scrape-btn">Load from URL</button>
+        </div>
+        <p id="boonetv-scrape-status" class="status"></p>
+
+        <p class="hint" style="margin-top:14px;"><strong>Option B - paste or upload the table yourself</strong> (fallback if the URL doesn't work, e.g. it's not a Trade Value Chart page):</p>
         <textarea id="boonetv-paste" rows="4" placeholder="Paste this position's trade value chart here (Player, HALF, PPR)..."></textarea>
+        <p class="hint">
+          If a direct copy/paste comes out scrambled, paste it as one value per line, in
+          reading order, starting with the header row - e.g. <code>Player</code>,
+          <code>HALF</code>, <code>PPR</code>, then each row's values in order.
+        </p>
         <div class="row">
           <input type="file" id="boonetv-file" accept=".csv,.txt" />
           <button id="boonetv-upload-btn">Upload / Refresh</button>

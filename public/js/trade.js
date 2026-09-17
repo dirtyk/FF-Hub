@@ -132,11 +132,44 @@
 
   function setupTradeValueUpload() {
     const posEl = document.getElementById('boonetv-pos');
+    const urlEl = document.getElementById('boonetv-url');
+    const scrapeBtnEl = document.getElementById('boonetv-scrape-btn');
+    const scrapeStatusEl = document.getElementById('boonetv-scrape-status');
     const pasteEl = document.getElementById('boonetv-paste');
     const fileEl = document.getElementById('boonetv-file');
     const btnEl = document.getElementById('boonetv-upload-btn');
     const statusEl = document.getElementById('boonetv-status');
     const loadedEl = document.getElementById('boonetv-loaded');
+
+    function onLoaded(pos, result, statusEl) {
+      statusEl.textContent = `${pos}: loaded ${result.matchedCount} players` +
+        (result.unmatchedCount ? `, ${result.unmatchedCount} unmatched (see console).` : '.');
+      statusEl.className = 'status ok';
+      if (result.unmatched && result.unmatched.length) {
+        console.warn(`Unmatched Boone trade-value ${pos} rows:`, result.unmatched);
+      }
+      renderLoadedPositions(loadedEl, result.positions);
+      evaluate();
+    }
+
+    scrapeBtnEl.addEventListener('click', async () => {
+      const url = urlEl.value.trim();
+      if (!url) {
+        scrapeStatusEl.textContent = 'Paste the article URL first.';
+        scrapeStatusEl.className = 'status error';
+        return;
+      }
+      scrapeStatusEl.textContent = 'Fetching...';
+      scrapeStatusEl.className = 'status';
+      const pos = posEl.value;
+      try {
+        const result = await Api.post('/api/tradevalues/boone/scrape', { url, pos });
+        onLoaded(pos, result, scrapeStatusEl);
+      } catch (e) {
+        scrapeStatusEl.textContent = e.message;
+        scrapeStatusEl.className = 'status error';
+      }
+    });
 
     btnEl.addEventListener('click', async () => {
       statusEl.textContent = 'Uploading...';
@@ -153,14 +186,7 @@
           statusEl.className = 'status error';
           return;
         }
-        statusEl.textContent = `${pos}: loaded ${result.matchedCount} players` +
-          (result.unmatchedCount ? `, ${result.unmatchedCount} unmatched (see console).` : '.');
-        statusEl.className = 'status ok';
-        if (result.unmatched && result.unmatched.length) {
-          console.warn(`Unmatched Boone trade-value ${pos} rows:`, result.unmatched);
-        }
-        renderLoadedPositions(loadedEl, result.positions);
-        evaluate();
+        onLoaded(pos, result, statusEl);
       } catch (e) {
         statusEl.textContent = e.message;
         statusEl.className = 'status error';

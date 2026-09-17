@@ -3,7 +3,11 @@
 // Starters tool can join rankings onto real rosters.
 const { makeStore } = require('./positionedStore');
 
-const SUFFIXES = /\b(jr|sr|ii|iii|iv|v)\.?$/i;
+// Applied AFTER punctuation stripping below, so "Jr." has already lost its
+// period by the time this runs - match trailing whitespace too, not just $,
+// or "Travis Etienne Jr." (-> "travis etienne jr ") never matches Sleeper's
+// suffix-less "Travis Etienne" (-> "travis etienne").
+const SUFFIXES = /\b(jr|sr|ii|iii|iv|v)\.?\s*$/i;
 const DST_WORDS = /\b(defense|dst|d\/st)\b/i;
 
 function normalizeName(raw) {

@@ -27,11 +27,15 @@ Then open http://localhost:3000.
    ranking table for your loaded team.
 3. **Trade Calculator** — this uses a *different* Boone product: his separate
    "Trade Value Chart" pages, one per position, with **Player, HALF, PPR**
-   columns (HALF = 0.5 PPR). Pick a position, paste or upload just that
-   chart, repeat per position. Then search for any rostered player in the
-   loaded league on either side (Giving / Receiving) and see each side's
-   total value (his HALF numbers, summed) and a verdict on how even the
-   trade is.
+   columns (HALF = 0.5 PPR; his QB chart uses **1QB, 2QB** instead - roster
+   format matters more than scoring format for QB value - 1QB is used by
+   default). Pick a position, then either paste the article's URL and click
+   *Load from URL* (these pages are server-rendered with a real HTML table,
+   so this fetches and parses it directly - no copy/paste needed), or fall
+   back to pasting/uploading the table yourself if a URL doesn't work.
+   Repeat per position. Then search for any rostered player in the loaded
+   league on either side (Giving / Receiving) and see each side's total
+   value (his numbers, summed) and a verdict on how even the trade is.
 
 ## Two different Boone pages — don't mix them up
 
@@ -51,10 +55,14 @@ comparable against every other position's HALF numbers.
 
 ## Notes
 
-- Everything here is uploaded/pasted, not scraped: Yahoo's tables render
-  client-side via JavaScript, so a plain scraper would be fragile and could
-  run against automated-access terms. Uploading/pasting is reliable and
-  works for any source, not just Boone's.
+- Only the Trade Value Chart pages are scraped by URL, and only because
+  they're actually server-rendered with a real `<table>` in the raw HTML
+  (verified directly - no JS execution needed, so no headless browser or
+  CORS proxy required either; the fetch happens in the Node backend, which
+  has no CORS restriction to begin with). His rankings pages are prose
+  articles with no table markup at all, so those stay paste/upload-only -
+  there's no reliable shortcut there. `server/scrape.js` only allows
+  `sports.yahoo.com` URLs.
 - The Starters tool's swap suggestions still need to compare *ranks* across
   positions (e.g. is a bench RB better than a starting TE?), even though a
   ranking source's rank is only meaningful *within* its own position.
