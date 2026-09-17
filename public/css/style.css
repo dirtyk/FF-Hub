@@ -130,6 +130,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .status.ok { color: var(--accent-2); }
 
 .hint { font-size: 13px; color: var(--muted); margin-top: -6px; }
+.hint code { background: #0d1420; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 
 .trade-grid, .rankings-grid {
   display: grid;

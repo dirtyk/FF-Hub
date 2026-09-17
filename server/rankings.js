@@ -57,6 +57,37 @@ function findCol(headers, candidates) {
   return -1;
 }
 
+// Bare header words we recognize when text has NO delimiter at all (see
+// detectOneCellPerLine below).
+const HEADER_WORD_RE = /^(rk|rank|overall|player|name|team|pos|position|half|ppr|value|tradevalue|1qb|2qb)$/i;
+
+// Some sites' JS-rendered tables copy/paste as one cell per line rather than
+// a delimited table (each header word on its own line, then every row's
+// values each on their own line, in reading order). Detects that shape by
+// finding a leading run of bare header words, then grouping the rest into
+// same-sized rows; returns null if the text doesn't look like this. On
+// success, `dataLines` are tab-joined so callers can reuse their normal
+// splitLine(l) => l.split('\t') path unchanged.
+function detectOneCellPerLine(lines) {
+  let headerCount = 0;
+  while (
+    headerCount < lines.length &&
+    lines[headerCount].length < 24 &&
+    HEADER_WORD_RE.test(lines[headerCount])
+  ) {
+    headerCount++;
+  }
+  if (headerCount < 2) return null;
+  const rest = lines.slice(headerCount);
+  if (rest.length === 0 || rest.length % headerCount !== 0) return null;
+  const headers = lines.slice(0, headerCount);
+  const dataLines = [];
+  for (let i = 0; i < rest.length; i += headerCount) {
+    dataLines.push(rest.slice(i, i + headerCount).join('\t'));
+  }
+  return { headers, dataLines, splitLine: (l) => l.split('\t') };
+}
+
 // Parses raw pasted/uploaded text into rows: [{rank, name, pos, team}].
 // fallbackPos is applied to any row whose own Position column is blank -
 // used when the user is pasting a single position's list (e.g. Boone's
@@ -69,23 +100,35 @@ function parseRankingsText(text, fallbackPos) {
     .filter((l) => l.length > 0);
   if (lines.length === 0) return { rows: [], warnings: ['Empty input.'] };
 
-  const delim = detectDelimiter(lines[0]);
-  const splitLine = (l) => (delim === '\t' ? l.split('\t').map((s) => s.trim()) : splitCsvLine(l));
+  const hasDelimiter = lines.some((l) => l.includes('\t') || l.includes(','));
 
-  const firstCells = splitLine(lines[0]);
-  const looksLikeHeader = firstCells.some((c) =>
-    /^(rank|player|name|team|pos|position|overall)/i.test(c)
-  );
-
-  let headers;
-  let dataLines;
-  if (looksLikeHeader) {
-    headers = firstCells;
-    dataLines = lines.slice(1);
+  let headers, dataLines, splitLine;
+  if (hasDelimiter) {
+    const delim = detectDelimiter(lines[0]);
+    splitLine = (l) => (delim === '\t' ? l.split('\t').map((s) => s.trim()) : splitCsvLine(l));
+    const firstCells = splitLine(lines[0]);
+    const looksLikeHeader = firstCells.some((c) =>
+      /^(rank|player|name|team|pos|position|overall)/i.test(c)
+    );
+    if (looksLikeHeader) {
+      headers = firstCells;
+      dataLines = lines.slice(1);
+    } else {
+      // No header - assume "rank, player, team, pos" if 4 cols, else fall back
+      headers = ['rank', 'player', 'team', 'pos'].slice(0, firstCells.length);
+      dataLines = lines;
+    }
   } else {
-    // No header - assume "rank, player, team, pos" if 4 cols, else fall back
-    headers = ['rank', 'player', 'team', 'pos'].slice(0, firstCells.length);
-    dataLines = lines;
+    const grouped = detectOneCellPerLine(lines);
+    if (!grouped) {
+      return {
+        rows: [],
+        warnings: [
+          'Could not detect a table in the pasted text. If it came out scrambled, try pasting it as one value per line in reading order, starting with the header row (e.g. Rank, Player, then each row\'s values in order).',
+        ],
+      };
+    }
+    ({ headers, dataLines, splitLine } = grouped);
   }
 
   const rankCol = findCol(headers, ['rank', 'overallrank', 'ovrrank', 'ecr']);
@@ -196,4 +239,5 @@ module.exports = {
   splitCsvLine,
   detectDelimiter,
   findCol,
+  detectOneCellPerLine,
 };
