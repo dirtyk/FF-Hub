@@ -6,7 +6,14 @@
 // This is what the Trade Calculator uses; the rankings module + Boone's rank
 // pages are what the Starters tool uses.
 const { makeStore } = require('./positionedStore');
-const { splitCsvLine, detectDelimiter, findCol, normalizePos, detectOneCellPerLine } = require('./rankings');
+const {
+  splitCsvLine,
+  detectDelimiter,
+  findCol,
+  normalizePos,
+  detectOneCellPerLine,
+  assembleFixedWidthRows,
+} = require('./rankings');
 
 // Parses raw pasted/uploaded text into rows: [{name, team, pos, half, ppr}].
 // fallbackPos is applied when the pasted table has no Position column of its
@@ -77,9 +84,9 @@ function parseTradeValueText(text, fallbackPos) {
     warnings.push('No HALF/1QB column found - using the PPR/2QB column instead.');
   }
 
+  const assembledRows = assembleFixedWidthRows(dataLines, splitLine, headers.length);
   const rows = [];
-  dataLines.forEach((line) => {
-    const cells = splitLine(line);
+  assembledRows.forEach((cells) => {
     const name = cells[nameCol];
     if (!name) return;
     const half = halfCol !== -1 ? parseFloat(cells[halfCol]) : parseFloat(cells[pprCol]);

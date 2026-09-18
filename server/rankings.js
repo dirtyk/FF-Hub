@@ -92,6 +92,32 @@ function detectOneCellPerLine(lines) {
   return { headers, dataLines, splitLine: (l) => l.split('\t') };
 }
 
+// Reassembles data lines into fixed-width rows by accumulating cells across
+// lines until each row reaches `width` cells. Handles a real site export
+// where one logical row's cells land on multiple separate lines instead of
+// one (verified against Boone's FLEX Rankings page: "Rank\t" lands on its
+// own line - the trailing tab leaves a stray empty cell - then "Player" on
+// the next, then "Position\tTeam\tOpponent" on a third; naively treating
+// each line as its own row read the Team cell as the player's name). A
+// trailing empty cell (from a line ending right at a delimiter, like
+// "1\t") is dropped since it's just that artifact, never real data. For
+// input where every line already has exactly `width` cells - the normal
+// case - this reduces to exactly one row per line, same as before.
+function assembleFixedWidthRows(dataLines, splitLine, width) {
+  const rows = [];
+  let buffer = [];
+  for (const line of dataLines) {
+    let cells = splitLine(line);
+    while (cells.length > 1 && cells[cells.length - 1] === '') cells = cells.slice(0, -1);
+    buffer.push(...cells);
+    while (buffer.length >= width) {
+      rows.push(buffer.slice(0, width));
+      buffer = buffer.slice(width);
+    }
+  }
+  return rows;
+}
+
 // Parses raw pasted/uploaded text into rows: [{rank, name, pos, team}].
 // fallbackPos is applied to any row whose own Position column is blank -
 // used when the user is pasting a single position's list (e.g. Boone's
@@ -146,9 +172,9 @@ function parseRankingsText(text, fallbackPos) {
     return { rows: [], warnings };
   }
 
+  const assembledRows = assembleFixedWidthRows(dataLines, splitLine, headers.length);
   const rows = [];
-  dataLines.forEach((line, i) => {
-    const cells = splitLine(line);
+  assembledRows.forEach((cells, i) => {
     const name = cells[nameCol];
     if (!name) return;
     const rank = rankCol !== -1 && cells[rankCol] ? parseInt(cells[rankCol], 10) : i + 1;
@@ -249,4 +275,5 @@ module.exports = {
   detectDelimiter,
   findCol,
   detectOneCellPerLine,
+  assembleFixedWidthRows,
 };
