@@ -17,14 +17,15 @@ Then open http://localhost:3000.
 1. **Connect** — enter your Sleeper username, click *Find Leagues*, pick the league
    and your team from the dropdowns, then *Load League*. This pulls your rosters
    straight from Sleeper's public API (no login/API key needed).
-2. **Starters** — Boone (and JJZ) publish one *ranked list* per position, so
-   upload/paste is per-position too: pick QB/RB/WR/TE/K/DEF from the dropdown,
-   then paste or upload just that position's list (a simple `Rank, Player` list
-   is fine, or a fuller `Rank, Player, Team, Position` table — headers are
-   auto-detected). Repeat for each position you have; each upload only replaces
-   that position's slice, so earlier positions stay loaded. Below the upload
-   boxes you'll see suggested starter/bench swaps and a full side-by-side
-   ranking table for your loaded team.
+2. **Starters** — for Boone, pick **FLEX** if you're using his combined Flex
+   Rankings page (one blended RB/WR/TE order) — upload it once, no
+   per-position lists needed. Otherwise (and for JJZ, for now) pick a
+   position and upload his separate per-position lists one at a time,
+   repeating per position; each upload only replaces that slice, so earlier
+   positions/FLEX stay loaded. Either way it's a simple `Rank, Player` list
+   or a fuller `Rank, Player, Team, Position` table — headers are
+   auto-detected. Below the upload boxes you'll see suggested starter/bench
+   swaps and a full side-by-side ranking table for your loaded team.
 3. **Trade Calculator** — this uses a *different* Boone product: his separate
    "Trade Value Chart" pages, one per position, with **Player, HALF, PPR**
    columns (HALF = 0.5 PPR; his QB chart uses **1QB, 2QB** instead - roster
@@ -64,13 +65,19 @@ comparable against every other position's HALF numbers.
   there's no reliable shortcut there. `server/scrape.js` only allows
   `sports.yahoo.com` URLs.
 - The Starters tool's swap suggestions still need to compare *ranks* across
-  positions (e.g. is a bench RB better than a starting TE?), even though a
-  ranking source's rank is only meaningful *within* its own position.
-  `server/tradeValue.js`'s `valueForPlayer` bridges this with a positional
+  positions for FLEX/SUPERFLEX slots (e.g. is a bench RB better than a
+  starting TE?). A **per-position** rank (e.g. Boone's separate RB/WR/TE
+  pages) is only meaningful *within* its own position, so
+  `server/tradeValue.js`'s `valueForPlayer` bridges that with a positional
   weight (RB/WR highest, TE next, QB discounted for single-QB leagues, K/DEF
   near zero) on top of a diminishing-returns rank curve — tune
   `POSITION_WEIGHTS` or `CURVE_EXPONENT` there if it feels off, and bump QB's
-  weight toward 1.0 if your league is superflex/2QB. The Trade Calculator
-  doesn't use this curve at all — it just sums Boone's own HALF values.
+  weight toward 1.0 if your league is superflex/2QB. A **FLEX** upload is
+  different: its rank is already cross-position comparable (Boone already
+  blended RB/WR/TE together), so `server/starters.js` compares those ranks
+  directly instead of running them through that curve - doing both would
+  double-count the positional scarcity Boone already baked into the order.
+  The Trade Calculator doesn't use any of this — it just sums Boone's own
+  HALF/1QB values from his Trade Value Chart directly.
 - All cached Sleeper data and uploaded rankings/trade values live in `data/`
   (gitignored) — delete that folder any time to reset local state.

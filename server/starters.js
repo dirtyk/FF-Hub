@@ -31,9 +31,23 @@ function rankIndex(rankingPayload) {
   return map;
 }
 
+// A "FLEX" upload (e.g. Boone's combined Flex Rankings page) is one blended
+// RB/WR/TE ordering that's already cross-position comparable, unlike his
+// separate per-position pages - see rankIndex's callers below.
+function flexIdSet(rankingPayload) {
+  const set = new Set();
+  const flex = rankingPayload && rankingPayload.positions && rankingPayload.positions.FLEX;
+  if (flex) for (const row of flex.rows) set.add(row.sleeperId);
+  return set;
+}
+
 function buildComparison(team, rankings) {
   const booneIdx = rankIndex(rankings.boone);
   const jjzIdx = rankIndex(rankings.jjz);
+  const flexIdsBySource = {
+    boone_rank: flexIdSet(rankings.boone),
+    jjz_rank: flexIdSet(rankings.jjz),
+  };
 
   const withRanks = (p) => ({
     ...p,
@@ -44,14 +58,19 @@ function buildComparison(team, rankings) {
   const starters = team.starters.map(withRanks);
   const bench = team.bench.map(withRanks);
 
-  // Comparisons use position-weighted *value*, not raw rank: a same-position
-  // slot (QB vs QB, RB vs RB) ranks identically either way, but FLEX/SUPERFLEX
-  // slots pit different positions against each other (e.g. bench RB vs
-  // starting TE) where raw positional ranks (rank 5 within each position)
-  // aren't directly comparable.
+  // Comparisons use a *value*, not raw rank, for FLEX/SUPERFLEX slots that
+  // pit different positions against each other (e.g. bench RB vs starting
+  // TE), where separate per-position ranks (rank 5 within each position)
+  // aren't directly comparable without adjustment. A rank from a FLEX-bucket
+  // upload is already cross-position comparable on its own, though (Boone's
+  // blended ordering already accounts for positional scarcity), so it's
+  // compared directly instead - running it through the same curve+weight
+  // treatment as a true per-position rank would double-count that scarcity.
   const valueOf = (p, source) => {
     const rank = p[source];
-    return rank ? valueForPlayer(p.position, rank) : null;
+    if (!rank) return null;
+    if (flexIdsBySource[source].has(p.player_id)) return -rank;
+    return valueForPlayer(p.position, rank);
   };
 
   const suggestions = [];
@@ -65,7 +84,7 @@ function buildComparison(team, rankings) {
     for (const source of ['boone_rank', 'jjz_rank']) {
       const starterValue = valueOf(starter, source);
       let best = null;
-      let bestValue = 0;
+      let bestValue = -Infinity; // FLEX-sourced values can be negative (-rank); 0 would wrongly exclude them
       for (const c of candidates) {
         const cValue = valueOf(c, source);
         if (cValue == null) continue;

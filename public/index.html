@@ -116,9 +116,23 @@
         <div class="rankings-grid">
           <div class="ranking-upload">
             <h3>Justin Boone (Yahoo, 0.5 PPR)</h3>
-            <p class="hint">Boone publishes a separate list per position - pick the position below, then paste or upload just that list (Rank + Player, or a full Rank/Player/Team/Position table). Repeat per position; each upload only replaces that position's list.</p>
+            <p class="hint">
+              Pick <strong>FLEX</strong> if you're using his combined Flex Rankings page (one
+              blended RB/WR/TE order - only need to upload this once, no per-position lists
+              needed). Otherwise Boone publishes a separate list per position - pick that
+              position instead and repeat for each one. Either way: paste or upload just that
+              list (Rank + Player, or a full Rank/Player/Team/Position table). Each upload only
+              replaces that slice.
+            </p>
+            <p class="hint">
+              Note: unlike his Trade Value Chart pages, these rankings pages aren't
+              server-rendered with a table, so there's no "Load from URL" option here - paste
+              or upload the table yourself. If a direct copy/paste comes out scrambled, paste it
+              as one value per line, in reading order, starting with the header row.
+            </p>
             <div class="row">
               <select id="boone-pos">
+                <option value="FLEX">FLEX (combined RB/WR/TE)</option>
                 <option value="QB">QB</option>
                 <option value="RB">RB</option>
                 <option value="WR">WR</option>

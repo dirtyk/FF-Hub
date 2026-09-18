@@ -7,7 +7,10 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
 
 const VALID_SOURCES = new Set(['boone', 'jjz']);
-const VALID_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
+// FLEX is a combined RB/WR/TE ranking (e.g. Boone's Flex Rankings page) -
+// already cross-position comparable, so it's stored/treated as one bucket
+// instead of being split back out into RB/WR/TE, see saveRankingsForPosition.
+const VALID_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'FLEX']);
 
 function checkSource(req, res, next) {
   if (!VALID_SOURCES.has(req.params.source)) {

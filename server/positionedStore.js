@@ -45,8 +45,13 @@ function makeStore(fileName) {
 
   // If the pasted/uploaded rows happen to carry their own mixed positions
   // (e.g. a combined export with a Position column), each row is filed under
-  // its own position rather than the slice `pos` the caller picked.
-  function saveForPosition(pos, matched, unmatched) {
+  // its own position rather than the slice `pos` the caller picked - UNLESS
+  // `exclusive` is set, which forces every row into the `pos` bucket
+  // regardless of its own position. Used for a combined/blended ranking
+  // (e.g. a "FLEX" list spanning RB/WR/TE in one already cross-position
+  // order) that must stay one bucket rather than being split back apart by
+  // each row's real position.
+  function saveForPosition(pos, matched, unmatched, { exclusive = false } = {}) {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     const file = readRaw();
     const uploadedAt = Date.now();
@@ -54,7 +59,7 @@ function makeStore(fileName) {
     const touched = new Set();
     const byPos = {};
     for (const row of matched) {
-      const rowPos = row.pos || pos || 'UNKNOWN';
+      const rowPos = exclusive ? pos || 'UNKNOWN' : row.pos || pos || 'UNKNOWN';
       (byPos[rowPos] = byPos[rowPos] || []).push(row);
       touched.add(rowPos);
     }

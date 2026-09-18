@@ -226,7 +226,12 @@ function storeFor(source) {
 }
 
 function saveRankingsForPosition(source, pos, matched, unmatched) {
-  return storeFor(source).saveForPosition(pos, matched, unmatched);
+  // "FLEX" is a combined RB/WR/TE ranking (e.g. Boone's Flex Rankings page) -
+  // its rank order is already cross-position comparable, so every matched
+  // row stays filed under one FLEX bucket instead of being split back out
+  // to each row's own real position (which matchRows backfills for display).
+  const exclusive = pos === 'FLEX';
+  return storeFor(source).saveForPosition(pos, matched, unmatched, { exclusive });
 }
 
 function loadRankings(source) {
