@@ -75,12 +75,13 @@
   function renderList(sideKey) {
     const listEl = document.getElementById(`list-${sideKey}`);
     listEl.innerHTML = sides[sideKey]
-      .map(
-        (p) => `<li data-id="${p.player_id}">
-          <span>${p.full_name} <span class="meta">${p.position || ''} ${p.team || ''}</span></span>
+      .map((p) => {
+        const base = `${p.position || ''} ${p.team || ''}`.trim();
+        return `<li data-id="${p.player_id}">
+          <span>${p.full_name} <span class="meta" data-base="${base}">${base}</span></span>
           <button class="remove-btn" data-id="${p.player_id}">&times;</button>
-        </li>`
-      )
+        </li>`;
+      })
       .join('');
     listEl.querySelectorAll('.remove-btn').forEach((btn) => {
       btn.addEventListener('click', () => removePlayer(sideKey, btn.dataset.id));
@@ -110,6 +111,10 @@
     }
   }
 
+  // Always rebuilds from the base text (position/team) stored on the
+  // element rather than appending, so re-running evaluate() - which
+  // annotates both sides every time, not just the one that changed - never
+  // stacks duplicate " · value N" text onto a side that wasn't touched.
   function annotateValues(sideKey, scored) {
     const listEl = document.getElementById(`list-${sideKey}`);
     scored.forEach((p) => {
@@ -117,7 +122,7 @@
       if (!li) return;
       const meta = li.querySelector('.meta');
       const valueTxt = p.value ? `value ${p.value}` : 'no trade value loaded';
-      meta.innerHTML += ` &middot; ${valueTxt}`;
+      meta.innerHTML = `${meta.dataset.base} &middot; ${valueTxt}`;
     });
   }
 
