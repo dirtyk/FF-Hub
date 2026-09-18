@@ -151,9 +151,16 @@
           </div>
           <div class="ranking-upload">
             <h3>JJ Zachariason</h3>
-            <p class="hint">Same idea: pick a position, paste or upload just that position's list. Repeat per position.</p>
+            <p class="hint">
+              Same idea as Boone: pick <strong>FLEX</strong> if you're using his combined Flex
+              Rankings export (one blended RB/WR/TE order, just his exported CSV, not a URL) -
+              upload it once. His export names the player-name column "FLEX" rather than
+              "Player", which is handled automatically. Otherwise pick a position and repeat per
+              position.
+            </p>
             <div class="row">
               <select id="jjz-pos">
+                <option value="FLEX">FLEX (combined RB/WR/TE)</option>
                 <option value="QB">QB</option>
                 <option value="RB">RB</option>
                 <option value="WR">WR</option>

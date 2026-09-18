@@ -162,7 +162,9 @@ function parseRankingsText(text, fallbackPos) {
   }
 
   const rankCol = findCol(headers, ['rank', 'overallrank', 'ovrrank', 'ecr']);
-  const nameCol = findCol(headers, ['player', 'playername', 'name']);
+  // JJZ's own FLEX-rankings CSV export names the player-name column "FLEX"
+  // rather than "Player" - verified against his real export.
+  const nameCol = findCol(headers, ['player', 'playername', 'name', 'flex']);
   const teamCol = findCol(headers, ['team', 'nflteam', 'tm']);
   const posCol = findCol(headers, ['pos', 'position']);
 

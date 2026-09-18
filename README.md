@@ -17,15 +17,17 @@ Then open http://localhost:3000.
 1. **Connect** — enter your Sleeper username, click *Find Leagues*, pick the league
    and your team from the dropdowns, then *Load League*. This pulls your rosters
    straight from Sleeper's public API (no login/API key needed).
-2. **Starters** — for Boone, pick **FLEX** if you're using his combined Flex
-   Rankings page (one blended RB/WR/TE order) — upload it once, no
-   per-position lists needed. Otherwise (and for JJZ, for now) pick a
-   position and upload his separate per-position lists one at a time,
-   repeating per position; each upload only replaces that slice, so earlier
-   positions/FLEX stay loaded. Either way it's a simple `Rank, Player` list
-   or a fuller `Rank, Player, Team, Position` table — headers are
-   auto-detected. Below the upload boxes you'll see suggested starter/bench
-   swaps and a full side-by-side ranking table for your loaded team.
+2. **Starters** — pick **FLEX** for either Boone or JJZ if you're using
+   their combined Flex Rankings (one blended RB/WR/TE order) — upload it
+   once, no per-position lists needed. JJZ's own CSV export for this names
+   the player-name column "FLEX" rather than "Player"; that's handled
+   automatically. Otherwise pick a position and upload separate
+   per-position lists one at a time, repeating per position; each upload
+   only replaces that slice, so earlier positions/FLEX stay loaded. Either
+   way it's a simple `Rank, Player` list, a fuller `Rank, Player, Team,
+   Position` table, or JJZ's own CSV export — headers are auto-detected.
+   Below the upload boxes you'll see suggested starter/bench swaps and a
+   full side-by-side ranking table for your loaded team.
 3. **Trade Calculator** — this uses a *different* Boone product: his separate
    "Trade Value Chart" pages, one per position, with **Player, HALF, PPR**
    columns (HALF = 0.5 PPR; his QB chart uses **1QB, 2QB** instead - roster
